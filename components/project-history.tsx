@@ -43,7 +43,7 @@ export function ProjectHistory({ history, onRestoreProject, onDeleteProject }: P
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="icon">
+        <Button variant="outline" size="icon" className="shadow-sm">
           <History className="h-[1.2rem] w-[1.2rem]" />
           <span className="sr-only">Project History</span>
         </Button>
@@ -63,7 +63,7 @@ export function ProjectHistory({ history, onRestoreProject, onDeleteProject }: P
               </div>
             ) : (
               history.map((item, index) => (
-                <div key={item.id} className="border rounded-lg p-4 space-y-3">
+                <div key={item.id} className="border rounded-lg p-4 space-y-3 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />

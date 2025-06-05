@@ -1,5 +1,6 @@
 "use client"
-import { Bot, ChevronDown } from "lucide-react"
+import { Bot, ChevronDown, Zap, Crown, Sparkles } from "lucide-react"
+import type React from "react"
 
 import {
   DropdownMenu,
@@ -19,49 +20,70 @@ export type AIModel = {
   tier: "free" | "pro" | "enterprise"
   speed: "fast" | "medium" | "slow"
   quality: "high" | "medium" | "low"
+  credits: number
+  icon?: React.ReactNode
 }
 
 const aiModels: AIModel[] = [
   {
-    id: "gpt-4",
-    name: "GPT-4",
+    id: "vizcode-1-free",
+    name: "VizCode 1 Free",
+    description: "Fast and efficient for basic UI components",
+    tier: "free",
+    speed: "fast",
+    quality: "medium",
+    credits: 1,
+    icon: <Zap className="h-3 w-3" />,
+  },
+  {
+    id: "vizcode-1.5-booster",
+    name: "VizCode 1.5 Booster",
+    description: "Enhanced model with better UI generation capabilities",
+    tier: "pro",
+    speed: "medium",
+    quality: "high",
+    credits: 3,
+    icon: <Sparkles className="h-3 w-3" />,
+  },
+  {
+    id: "chatgpt-4",
+    name: "ChatGPT 4",
     description: "Most capable model for complex UI generation",
     tier: "pro",
     speed: "medium",
     quality: "high",
+    credits: 5,
+    icon: <Bot className="h-3 w-3" />,
   },
   {
-    id: "gpt-3.5-turbo",
-    name: "GPT-3.5 Turbo",
-    description: "Fast and efficient for standard UI components",
-    tier: "free",
-    speed: "fast",
-    quality: "medium",
+    id: "claude-4-opus",
+    name: "Claude 4 Opus",
+    description: "Premium model for sophisticated UI designs",
+    tier: "enterprise",
+    speed: "slow",
+    quality: "high",
+    credits: 8,
+    icon: <Crown className="h-3 w-3" />,
   },
   {
-    id: "claude-3",
-    name: "Claude 3",
+    id: "claude-3.5-sonnet",
+    name: "Claude 3.5 Sonnet",
     description: "Excellent for detailed UI specifications",
     tier: "pro",
     speed: "medium",
     quality: "high",
-  },
-  {
-    id: "gemini-pro",
-    name: "Gemini Pro",
-    description: "Google's advanced model for UI generation",
-    tier: "enterprise",
-    speed: "slow",
-    quality: "high",
+    credits: 4,
+    icon: <Sparkles className="h-3 w-3" />,
   },
 ]
 
 interface AIModelSelectorProps {
   selectedModel: string
   onModelChange: (modelId: string) => void
+  availableCredits: number
 }
 
-export function AIModelSelector({ selectedModel, onModelChange }: AIModelSelectorProps) {
+export function AIModelSelector({ selectedModel, onModelChange, availableCredits }: AIModelSelectorProps) {
   const currentModel = aiModels.find((model) => model.id === selectedModel) || aiModels[0]
 
   const getTierColor = (tier: string) => {
@@ -77,44 +99,67 @@ export function AIModelSelector({ selectedModel, onModelChange }: AIModelSelecto
     }
   }
 
+  const canUseModel = (model: AIModel) => {
+    return availableCredits >= model.credits
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="w-full justify-between">
           <div className="flex items-center gap-2">
-            <Bot className="h-4 w-4" />
-            <span>{currentModel.name}</span>
-            <Badge className={getTierColor(currentModel.tier)}>{currentModel.tier}</Badge>
+            {currentModel.icon}
+            <span className="truncate">{currentModel.name}</span>
+            <Badge className={getTierColor(currentModel.tier)} variant="secondary">
+              {currentModel.credits}c
+            </Badge>
           </div>
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className="h-4 w-4 flex-shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-80">
         <DropdownMenuLabel>Select AI Model</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {aiModels.map((model) => (
-          <DropdownMenuItem
-            key={model.id}
-            onClick={() => onModelChange(model.id)}
-            className="flex flex-col items-start gap-1 p-3"
-          >
-            <div className="flex items-center gap-2 w-full">
-              <span className="font-medium">{model.name}</span>
-              <Badge className={getTierColor(model.tier)}>{model.tier}</Badge>
-              {model.id === selectedModel && <Badge variant="secondary">Selected</Badge>}
-            </div>
-            <p className="text-sm text-muted-foreground">{model.description}</p>
-            <div className="flex gap-2 mt-1">
-              <Badge variant="outline" className="text-xs">
-                Speed: {model.speed}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                Quality: {model.quality}
-              </Badge>
-            </div>
-          </DropdownMenuItem>
-        ))}
+        {aiModels.map((model) => {
+          const canUse = canUseModel(model)
+          return (
+            <DropdownMenuItem
+              key={model.id}
+              onClick={() => canUse && onModelChange(model.id)}
+              className={`flex flex-col items-start gap-1 p-3 ${!canUse ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={!canUse}
+            >
+              <div className="flex items-center gap-2 w-full">
+                {model.icon}
+                <span className="font-medium">{model.name}</span>
+                <div className="flex gap-1 ml-auto">
+                  <Badge className={getTierColor(model.tier)} variant="secondary">
+                    {model.tier}
+                  </Badge>
+                  <Badge variant="outline">{model.credits}c</Badge>
+                  {model.id === selectedModel && <Badge variant="default">Selected</Badge>}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">{model.description}</p>
+              <div className="flex gap-2 mt-1">
+                <Badge variant="outline" className="text-xs">
+                  Speed: {model.speed}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  Quality: {model.quality}
+                </Badge>
+                {!canUse && (
+                  <Badge variant="destructive" className="text-xs">
+                    Insufficient credits
+                  </Badge>
+                )}
+              </div>
+            </DropdownMenuItem>
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
+
+export { aiModels }

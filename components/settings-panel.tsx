@@ -36,7 +36,7 @@ export function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="icon">
+        <Button variant="outline" size="icon" className="shadow-sm">
           <Settings className="h-[1.2rem] w-[1.2rem]" />
           <span className="sr-only">Settings</span>
         </Button>

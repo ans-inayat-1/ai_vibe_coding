@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Code, Loader2, Sparkles } from "lucide-react"
+import { Code, Sparkles, Download, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -9,36 +9,67 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { TemplateGallery, type Template } from "@/components/template-gallery"
 import { SettingsPanel, type UserSettings } from "@/components/settings-panel"
 import { FileStatusList, type FileStatus } from "@/components/file-status"
-import { AIModelSelector } from "@/components/ai-model-selector"
+import { AIModelSelector, aiModels } from "@/components/ai-integration/ai-model-selector"
 import { ProjectHistory, type ProjectHistoryItem } from "@/components/project-history"
+import { CreditTracker, type CreditInfo } from "@/components/credit-tracker"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { RealTimeAI } from "@/components/ai-integration/real-time-ai"
+import { CollaborationPanel } from "@/components/collaboration/collaboration-panel"
+import { ExportPanel } from "@/components/export/export-panel"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { useRouter } from "next/navigation"
 
 export default function AIVibeBuilder() {
   const [prompt, setPrompt] = useState("")
-  const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo")
+  const [selectedModel, setSelectedModel] = useState("vizcode-1-free")
+  const [credits, setCredits] = useState<CreditInfo>({
+    used: 12,
+    total: 50,
+    plan: "free",
+  })
   const [code, setCode] = useState(`// Welcome to AI Vibe Builder
 // Your generated code will appear here
 
 import React from 'react';
+import { Sparkles } from 'lucide-react';
 
 function WelcomeComponent() {
   return (
-    <div className="flex items-center justify-center min-h-[400px] p-8">
-      <div className="text-center space-y-4">
-        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto flex items-center justify-center">
-          <Sparkles className="w-8 h-8 text-white" />
+    <div className="flex items-center justify-center min-h-[400px] p-8 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-950">
+      <div className="text-center space-y-6 max-w-2xl">
+        <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg">
+          <Sparkles className="w-10 h-10 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          AI Vibe Builder
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 max-w-md">
-          Describe your UI vision and watch as AI transforms your ideas into beautiful, functional components.
-        </p>
-        <div className="flex gap-2 justify-center">
-          <button className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+        <div className="space-y-3">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+            AI Vibe Builder
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+            Transform your ideas into beautiful, functional UI components with the power of AI. 
+            Describe your vision and watch it come to life.
+          </p>
+        </div>
+        <div className="flex gap-3 justify-center flex-wrap">
+          <button className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
             Get Started
           </button>
-          <button className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+          <button className="px-8 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 font-medium">
             Learn More
           </button>
         </div>
@@ -59,6 +90,10 @@ export default WelcomeComponent;`)
     editorTheme: "vs-dark",
     indentSize: 2,
   })
+  const [showCollaboration, setShowCollaboration] = useState(false)
+  const [showExport, setShowExport] = useState(false)
+
+  const router = useRouter()
 
   const handleTemplateSelect = (template: Template) => {
     setPrompt(template.prompt)
@@ -74,9 +109,7 @@ export default WelcomeComponent;`)
     setProjectHistory((prev) => prev.filter((item) => item.id !== id))
   }
 
-  const handleGenerate = () => {
-    if (!prompt.trim()) return
-
+  const handleGenerationStart = () => {
     setIsGenerating(true)
 
     // Set up initial file statuses
@@ -115,99 +148,50 @@ export default WelcomeComponent;`)
             setFileStatuses((prev) =>
               prev.map((file) => (file.name === "utils.js" ? { ...file, status: "completed" } : file)),
             )
-
-            const generatedCode = `// Generated with ${selectedModel} from: ${prompt}
-import React from 'react';
-
-function GeneratedComponent() {
-  return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-8 shadow-lg">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              AI Generated Component
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">Created with {selectedModel}</p>
-          </div>
-        </div>
-        
-        <div className="space-y-4">
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-            This component was generated based on your prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Features</h3>
-              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                <li>• Responsive design</li>
-                <li>• Dark mode support</li>
-                <li>• Modern styling</li>
-                <li>• Accessible components</li>
-              </ul>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Technologies</h3>
-              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                <li>• React</li>
-                <li>• Tailwind CSS</li>
-                <li>• TypeScript</li>
-                <li>• Lucide Icons</li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="flex gap-3 pt-4">
-            <button className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">
-              Primary Action
-            </button>
-            <button className="px-6 py-2 border border-blue-500 text-blue-500 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors font-medium">
-              Secondary Action
-            </button>
-            <button className="px-6 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-medium">
-              Learn More
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default GeneratedComponent;`
-
-            setCode(generatedCode)
-            setIsGenerating(false)
-            setShowPreviewUpdate(true)
-
-            // Add to project history
-            const historyItem: ProjectHistoryItem = {
-              id: Date.now().toString(),
-              prompt,
-              model: selectedModel,
-              timestamp: new Date(),
-              code: generatedCode,
-            }
-            setProjectHistory((prev) => [historyItem, ...prev.slice(0, 9)]) // Keep last 10 items
-
-            setTimeout(() => setShowPreviewUpdate(false), 1000)
           }, 800)
         }, 1200)
       }, 1500)
     }, 500)
   }
 
+  const handleCodeGenerated = (generatedCode: string) => {
+    setCode(generatedCode)
+    setShowPreviewUpdate(true)
+
+    // Add to project history
+    const historyItem: ProjectHistoryItem = {
+      id: Date.now().toString(),
+      prompt,
+      model: selectedModel,
+      timestamp: new Date(),
+      code: generatedCode,
+    }
+    setProjectHistory((prev) => [historyItem, ...prev.slice(0, 9)]) // Keep last 10 items
+
+    setTimeout(() => setShowPreviewUpdate(false), 1000)
+  }
+
+  const handleGenerationComplete = () => {
+    setIsGenerating(false)
+
+    // Deduct credits
+    const selectedModelData = aiModels.find((model) => model.id === selectedModel)
+    const requiredCredits = selectedModelData?.credits || 1
+
+    setCredits((prev) => ({
+      ...prev,
+      used: prev.used + requiredCredits,
+    }))
+  }
+
+  const availableCredits = credits.total - credits.used
+
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950">
       {/* Navbar */}
-      <header className="flex items-center h-16 px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+      <header className="flex items-center h-16 px-6 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
             <Code className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -221,73 +205,137 @@ export default GeneratedComponent;`
             onRestoreProject={handleRestoreProject}
             onDeleteProject={handleDeleteProject}
           />
+
+          <Dialog open={showCollaboration} onOpenChange={setShowCollaboration}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="shadow-sm">
+                <Share2 className="h-4 w-4 mr-2" />
+                Collaborate
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[800px]">
+              <DialogHeader>
+                <DialogTitle>Collaboration</DialogTitle>
+                <DialogDescription>Work together with your team in real-time</DialogDescription>
+              </DialogHeader>
+              <div className="mt-4">
+                <CollaborationPanel />
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showExport} onOpenChange={setShowExport}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="shadow-sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Export Project</DialogTitle>
+                <DialogDescription>Export your project in various formats</DialogDescription>
+              </DialogHeader>
+              <div className="mt-4">
+                <ExportPanel />
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <SettingsPanel settings={settings} onSettingsChange={setSettings} />
           <ThemeToggle />
-          <Button variant="outline" size="sm">
-            Sign In
-          </Button>
-          <Button size="sm" className="bg-blue-500 hover:bg-blue-600">
-            Sign Up
-          </Button>
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="/placeholder.svg" alt="User" />
+                  <AvatarFallback>U</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">John Doe</p>
+                  <p className="text-xs leading-none text-muted-foreground">john@example.com</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push("/profile")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem>Billing</DropdownMenuItem>
+              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Log out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950">
+        {/* Navbar */}
+        {/* Main Content */}
         {/* Left Sidebar */}
-        <div className="w-full md:w-80 lg:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-          <div className="p-6 flex flex-col h-full">
-            <div className="space-y-4 mb-6">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">AI Model</h2>
-                <AIModelSelector selectedModel={selectedModel} onModelChange={setSelectedModel} />
-              </div>
+        <div className="w-full md:w-80 lg:w-96 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+          <div className="p-6 flex flex-col h-full space-y-6">
+            {/* Credit Tracker */}
+            <CreditTracker credits={credits} />
+
+            {/* AI Model Selection */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">AI Model</h2>
+              <AIModelSelector
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
+                availableCredits={availableCredits}
+              />
             </div>
 
+            {/* Prompt Input */}
             <div className="flex-1 flex flex-col">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Describe Your UI</h2>
               <Textarea
                 placeholder="Describe the UI component you want to create. Be specific about layout, styling, functionality, and any special features..."
-                className="flex-1 resize-none min-h-[200px] border-gray-200 dark:border-gray-600"
+                className="flex-1 resize-none min-h-[200px] border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 style={{ fontSize: `${settings.fontSize}px` }}
               />
-              <Button
-                className="mt-4 w-full bg-blue-500 hover:bg-blue-600"
-                onClick={handleGenerate}
-                disabled={isGenerating || !prompt.trim()}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate UI
-                  </>
-                )}
-              </Button>
+
+              <RealTimeAI
+                prompt={prompt}
+                selectedModel={selectedModel}
+                onCodeGenerated={handleCodeGenerated}
+                onGenerationStart={handleGenerationStart}
+                onGenerationComplete={handleGenerationComplete}
+              />
             </div>
           </div>
         </div>
 
         {/* Main Content Area */}
-        <div className="hidden md:flex flex-col flex-1 bg-white dark:bg-gray-800">
+        <div className="hidden md:flex flex-col flex-1 bg-white dark:bg-gray-900">
           <Tabs defaultValue="preview" className="flex flex-col flex-1">
-            <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-              <TabsList className="bg-white dark:bg-gray-800">
-                <TabsTrigger value="preview">Live Preview</TabsTrigger>
-                <TabsTrigger value="code">Code Editor</TabsTrigger>
-                <TabsTrigger value="status">Generation Status</TabsTrigger>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+              <TabsList className="bg-white dark:bg-gray-800 shadow-sm">
+                <TabsTrigger value="preview" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                  Live Preview
+                </TabsTrigger>
+                <TabsTrigger value="code" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                  Code Editor
+                </TabsTrigger>
+                <TabsTrigger value="status" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                  Generation Status
+                </TabsTrigger>
               </TabsList>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="shadow-sm">
                   Copy Code
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="shadow-sm" onClick={() => setShowExport(true)}>
+                  <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
               </div>
@@ -295,61 +343,29 @@ export default GeneratedComponent;`
 
             <TabsContent value="preview" className="flex-1 p-0 m-0">
               <div
-                className={`flex-1 bg-gray-50 dark:bg-gray-900 p-6 overflow-auto transition-opacity duration-500 ${
+                className={`flex-1 bg-gray-50 dark:bg-gray-950 p-8 overflow-auto transition-opacity duration-500 ${
                   showPreviewUpdate ? "animate-fade-in" : ""
                 }`}
               >
-                <div className="max-w-4xl mx-auto p-6">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-8 shadow-lg">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                        <Sparkles className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">AI Generated Component</h2>
-                        <p className="text-gray-600 dark:text-gray-400">Created with {selectedModel}</p>
-                      </div>
+                <div className="flex items-center justify-center min-h-[400px] p-8 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-950 rounded-2xl">
+                  <div className="text-center space-y-6 max-w-2xl">
+                    <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg">
+                      <Sparkles className="w-10 h-10 text-white" />
                     </div>
-
-                    <div className="space-y-4">
-                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                        This component was generated based on your prompt. Customize the design and functionality to
-                        match your exact requirements.
+                    <div className="space-y-3">
+                      <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">AI Vibe Builder</h1>
+                      <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                        Transform your ideas into beautiful, functional UI components with the power of AI. Describe
+                        your vision and watch it come to life.
                       </p>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Features</h3>
-                          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                            <li>• Responsive design</li>
-                            <li>• Dark mode support</li>
-                            <li>• Modern styling</li>
-                            <li>• Accessible components</li>
-                          </ul>
-                        </div>
-
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Technologies</h3>
-                          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                            <li>• React</li>
-                            <li>• Tailwind CSS</li>
-                            <li>• TypeScript</li>
-                            <li>• Lucide Icons</li>
-                          </ul>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3 pt-4">
-                        <button className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">
-                          Primary Action
-                        </button>
-                        <button className="px-6 py-2 border border-blue-500 text-blue-500 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors font-medium">
-                          Secondary Action
-                        </button>
-                        <button className="px-6 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-medium">
-                          Learn More
-                        </button>
-                      </div>
+                    </div>
+                    <div className="flex gap-3 justify-center flex-wrap">
+                      <button className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        Get Started
+                      </button>
+                      <button className="px-8 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 font-medium">
+                        Learn More
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -371,9 +387,12 @@ export default GeneratedComponent;`
 
             <TabsContent value="status" className="flex-1 p-6 m-0">
               <div className="space-y-6">
-                <Card>
+                <Card className="shadow-lg">
                   <CardHeader>
-                    <CardTitle>File Generation Status</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5" />
+                      File Generation Status
+                    </CardTitle>
                     <CardDescription>Track the progress of your AI-generated files</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -382,16 +401,14 @@ export default GeneratedComponent;`
                 </Card>
 
                 {fileStatuses.some((file) => file.status === "completed") && (
-                  <div className="max-w-4xl mx-auto p-6">
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-8 shadow-lg">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                          <Sparkles className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Generation Complete!</h2>
-                          <p className="text-gray-600 dark:text-gray-400">Your component is ready</p>
-                        </div>
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950 dark:to-emerald-950 rounded-2xl p-8 shadow-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                        <Sparkles className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Generation Complete!</h2>
+                        <p className="text-gray-600 dark:text-gray-400">Your component is ready for use</p>
                       </div>
                     </div>
                   </div>
@@ -402,17 +419,20 @@ export default GeneratedComponent;`
         </div>
 
         {/* Mobile Tabs (visible on small screens) */}
-        <div className="flex flex-col flex-1 md:hidden bg-white dark:bg-gray-800">
+        <div className="flex flex-col flex-1 md:hidden bg-white dark:bg-gray-900">
           <Tabs defaultValue="prompt" className="flex flex-col flex-1">
             <TabsList className="grid grid-cols-3 m-2">
               <TabsTrigger value="prompt">Prompt</TabsTrigger>
               <TabsTrigger value="code">Code</TabsTrigger>
               <TabsTrigger value="preview">Preview</TabsTrigger>
             </TabsList>
-            <TabsContent value="prompt" className="flex-1 p-4 flex flex-col">
-              <div className="space-y-4 mb-4">
-                <AIModelSelector selectedModel={selectedModel} onModelChange={setSelectedModel} />
-              </div>
+            <TabsContent value="prompt" className="flex-1 p-4 flex flex-col space-y-4">
+              <CreditTracker credits={credits} />
+              <AIModelSelector
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
+                availableCredits={availableCredits}
+              />
               <Textarea
                 placeholder="Describe your UI here..."
                 className="flex-1 resize-none min-h-[200px]"
@@ -420,23 +440,13 @@ export default GeneratedComponent;`
                 onChange={(e) => setPrompt(e.target.value)}
                 style={{ fontSize: `${settings.fontSize}px` }}
               />
-              <Button
-                className="mt-4 w-full bg-blue-500 hover:bg-blue-600"
-                onClick={handleGenerate}
-                disabled={isGenerating || !prompt.trim()}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate UI
-                  </>
-                )}
-              </Button>
+              <RealTimeAI
+                prompt={prompt}
+                selectedModel={selectedModel}
+                onCodeGenerated={handleCodeGenerated}
+                onGenerationStart={handleGenerationStart}
+                onGenerationComplete={handleGenerationComplete}
+              />
             </TabsContent>
             <TabsContent value="code" className="flex-1 flex flex-col p-0 m-0">
               <div
@@ -450,19 +460,17 @@ export default GeneratedComponent;`
                 <pre>{code}</pre>
               </div>
             </TabsContent>
-            <TabsContent value="preview" className="flex-1 p-4 m-0 bg-gray-50 dark:bg-gray-900">
-              <div className="max-w-4xl mx-auto">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 shadow-lg">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">AI Generated</h2>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Mobile Preview</p>
-                    </div>
+            <TabsContent value="preview" className="flex-1 p-4 m-0 bg-gray-50 dark:bg-gray-950">
+              <div className="flex items-center justify-center min-h-[300px] p-6 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-950 rounded-xl">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl mx-auto flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-white" />
                   </div>
-                  <div className="flex gap-2">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">AI Generated</h2>
+                    <p className="text-gray-600 dark:text-gray-400">Mobile Preview</p>
+                  </div>
+                  <div className="flex gap-2 justify-center">
                     <button className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm">Primary</button>
                     <button className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm">
                       Secondary
